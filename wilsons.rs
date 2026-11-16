@@ -1,43 +1,53 @@
+/*
+ | Name:   Joe Grimes, Michael Massenheimer
+ | Course: CSC372
+ | Assignment: Project Part 2
+ | Instructor: L. McCann
+ | Due Date: 11/16/2026 2:00 PM
+ |
+ | Description: This file serves to offer implementation for wilsons algorithm. Upon execution
+ |              the user will be prompted to input height and width dimensions, and a grid will be
+ |              generated from those dimensions, and a maze will be randomly populated.
+ |
+ | Language: rustc 1.1
+ | Deficiencies: Know of no unsatisfied requirements and no logic errors
+ */
+
 use std::collections::HashSet;
 
 
+/*
+Name: generate_grid
+Purpose: This method serves to generate a grid from a provided width and height. It will multiply
+         the provided dimensions by 2 to accommodate for walls between maze spaces, and add one to each for the perimeter.
+Pre-condition: Provided inputs should be valid usize inputs
+Post-condition: A grid of dimensions 2width, 2height will be returned
+Parameters: height, the provided height from the user
+            width, the provided width from the user
+Returns: The generated grid
+*/
 
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
-
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
 fn generate_grid(height: usize, width: usize) -> Vec<Vec<char>> {
     let grid = vec![vec!['#'; 2 * width + 1]; 2 * height + 1];
     return grid;
 }
 
 
-//0 left
-//1 right
-//2 up
-//3 down
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
 
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
+/*
+Name: step
+Purpose: This function serves to generate a random number 0-3, and attempt to step that direction in the grid
+         Possible directions include left(0), right(1), up(2) down(3). If a step in that direction is within the bounds
+         of provided width and height, and greater than 0, a tuple of the new position(x,y) is returned.
+         If the new step is outside provided bounds, nothing is returned.
+Pre-condition: Provided arguments should be valid usize and non negative
+Post-condition: A tuple of the new position (or nothing) is returned.
+Parameters: row, the current y position in the grid
+            col, the current x position in the grid
+            height, the height of the grid
+            width, the width of the grid
+Returns: A tuple of the new position, or nothing if step was illegal.
+*/
 fn step(row: usize, col: usize, height: usize, width: usize) -> (usize, usize) {
     loop {
         match rand::random_range(0..4) {
@@ -50,21 +60,23 @@ fn step(row: usize, col: usize, height: usize, width: usize) -> (usize, usize) {
     }
 }
 
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
-
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
-fn traverse(walk_pos_x: usize, walk_pos_y: usize, maze_tiles: &mut HashSet<(usize, usize)>, current_walk: &mut Vec<(usize, usize)>, height: usize, width: usize) -> bool {
-    let new_pos = step(walk_pos_x, walk_pos_y, height, width);
+/*
+Name: traverse
+Purpose: This function serves to take one random step from the current position. It will return true
+         if the step lands on an existing maze tile (walk is over), false otherwise.
+         If the step revisits a tile in the current walk, the loop in the current walk is erased.
+Pre-condition: walk positions should be valid non negative indices, height and width should be non negative values
+Post-condition: The current walk will end and the function will return true, or the new position will be added to the walk and return false.
+Parameters: walk_pos_y, the current y position during the traverse
+            walk_pos_x, the current x position during the traverse
+            maze_tiles, set holding all tiles that are already included in the maze
+            current_walk, the tiles of the current walk
+            height, the height of the grid
+            width, the width of the grid
+Returns: bool, true if current walk has collided with tiles from the maze, or false if the walk will continue
+*/
+fn traverse(walk_pos_y: usize, walk_pos_x: usize, maze_tiles: &mut HashSet<(usize, usize)>, current_walk: &mut Vec<(usize, usize)>, height: usize, width: usize) -> bool {
+    let new_pos = step(walk_pos_y, walk_pos_x, height, width);
     if current_walk.contains(&new_pos) {
         let repeated_index = current_walk.iter().position(|x| *x == new_pos).unwrap();
         current_walk.truncate(repeated_index + 1);
@@ -79,19 +91,15 @@ fn traverse(walk_pos_x: usize, walk_pos_y: usize, maze_tiles: &mut HashSet<(usiz
     return false;
 }
 
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
-
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
+/*
+Name: generate starts
+Purpose: This function serves to randomly generate starting positions for the maze, and new walk path
+Pre-condition: height and width should be valid non negative usize
+Post-condition: random indices for the starts of the walk path and maze will be generated
+Parameters: height, the height of the grid
+            width, the width of the grid
+Returns: Tuple containing all 4 randomly generated indices for the walk and maze starting positions.
+*/
 fn generate_starts(height: usize, width: usize) -> (usize, usize, usize, usize) {
     let maze_row = rand::random_range(0..height);
     let maze_col = rand::random_range(0..width);
@@ -104,50 +112,47 @@ fn generate_starts(height: usize, width: usize) -> (usize, usize, usize, usize) 
     }
 }
 
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
-
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
+/*
+Name: persist changes to grid
+Purpose: This method serves to copy the contents of the current walk into the maze tiles, and persist those positions into the existing grid.
+         Walls between positions of the current walk are also torn down to show the connecting path.
+Pre-condition: current walk should hold valid indices into the grid. The grid should be initialized with valid dimensions.
+Post-condition: The current walk's contents will be added to maze tiles, and the grid will reflect the positions of the current walk
+Parameters: current_walk, the most recent walk that is ready to be merged into the grid
+            maze_tile, the set of tiles owned by the maze
+            grid, the generated grid to hold the maze
+Returns: None
+*/
 fn persist_changes_to_grid(current_walk: &mut Vec<(usize, usize)>, maze_tile: &mut HashSet<(usize, usize)>, grid: &mut Vec<Vec<char>>) -> (){
-
     for i in 0..current_walk.len() {
         maze_tile.insert(current_walk[i]);
         grid[2 * current_walk[i].0 + 1][2 * current_walk[i].1 + 1] = ' ';
     }
 
     for i in 1..current_walk.len() {
-        let (r1, c1) = current_walk[i - 1];
-        let (r2, c2) = current_walk[i];
-        grid[r1 + r2 + 1][c1 + c2 + 1] = ' ';
+        let (row1, column1) = current_walk[i - 1];
+        let (row2, column2) = current_walk[i];
+        grid[row1 + row2 + 1][column1 + column2 + 1] = ' ';
     }
+    //clear the current walk
     current_walk.clear();
 }
 
-/*---------------------------------------------------------------------
-        |  Method
-        |
-        |  Purpose:
 
-        |  Pre-condition:
-        |
-        |  Post-condition:
-        |
-        |  Parameters: row
-        |
-        |  Returns:  None.
-        *-------------------------------------------------------------------*/
-fn populate_maze(grid: &mut Vec<Vec<char>>, width: usize, height: usize) -> () {
+/*
+Name: populate maze
+Purpose: This method serves to start the generation process of the maze. Random indices for the first maze and walk positions will be generated,
+         then the function will repeatedly call traverse until every maze position has been occupied. The resulting grid will be printed to the screen.
+Pre-condition: height and width should be valid non negative, grid should be initialized.
+Post-condition: The maze will be generated and printed
+Parameters: grid, the generated grid
+            height, the height of the grid
+            width, the width of the grid
+Returns: None
+*/
+fn populate_maze(grid: &mut Vec<Vec<char>>, height: usize, width: usize) -> () {
 
-    let (mut maze_row_pos, mut maze_col_pos, mut walk_row_pos, mut walk_col_pos) = generate_starts(height, width);
+    let (maze_row_pos, maze_col_pos, mut walk_row_pos, mut walk_col_pos) = generate_starts(height, width);
 
     let mut maze_tiles: HashSet<(usize, usize)> = HashSet::new();
     let mut current_walk: Vec<(usize, usize)> = Vec::new();
